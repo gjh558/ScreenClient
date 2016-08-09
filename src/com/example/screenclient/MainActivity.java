@@ -25,8 +25,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 	
 	private SurfaceView surfaceView;
 	private VideoDecoder mDecoder;
-	private ClientThread mClientThread;
-	
+	//private ClientThread mClientThread;
+	private Loop2GetFrameThread mLoop2GetFrameThread;
 	private int width = 720;
 	private int height = 1080;
 	
@@ -67,30 +67,30 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		if (id == R.id.start) {
-			 if (studentId.length() <= 0 || roomId.length() <= 0) {
+			 if (studentId == null || roomId == null || studentId.length() <= 0 || roomId.length() <= 0) {
              	Toast.makeText(MainActivity.this, "Please input valid IDs", Toast.LENGTH_SHORT).show();
              	return false;
              }
 			 
-			if (mDecoder == null && mClientThread == null) {
+			if (mDecoder == null && mLoop2GetFrameThread == null) {
 				mDecoder = new VideoDecoder();
-				mClientThread = new ClientThread(MainActivity.this, mDecoder, mIp, studentId, roomId);
-				if (!mClientThread.getThreadState()) {
+				mLoop2GetFrameThread = new Loop2GetFrameThread(MainActivity.this, mDecoder, mIp, studentId, roomId);
+				if (!mLoop2GetFrameThread.getThreadState()) {
 					
 					mDecoder.initDecoder(width, height, surfaceView.getHolder().getSurface());
-					mClientThread.start();
+					mLoop2GetFrameThread.start();
 				}
 			} else {
-				if (mClientThread.getPause()) {
-					mClientThread.setPause(false);
+				if (mLoop2GetFrameThread.getPause()) {
+					mLoop2GetFrameThread.setPause(false);
 				}else {
 					Toast.makeText(MainActivity.this, "Already running...", Toast.LENGTH_SHORT).show();
 				}
 			}
 			return true;
 		}else if (id == R.id.pause) {
-			if (mClientThread != null && mDecoder != null) {
-				mClientThread.setPause(true);
+			if (mLoop2GetFrameThread != null && mDecoder != null) {
+				mLoop2GetFrameThread.setPause(true);
 //				if (mClientThread.getThreadState()) {
 //					
 //					
@@ -123,6 +123,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 			showSettingDialog();
 			return true;
 		} else if (id == R.id.exit) {
+			mLoop2GetFrameThread.StopThread();
 			this.finish();
 		}
 		return super.onOptionsItemSelected(item);
@@ -142,12 +143,12 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
 		// TODO Auto-generated method stub
-		if (mClientThread != null && mDecoder != null) {
-			if (mClientThread.getThreadState()) {
-				mClientThread.StopThread();
+		if (mLoop2GetFrameThread != null && mDecoder != null) {
+			if (mLoop2GetFrameThread.getThreadState()) {
+				mLoop2GetFrameThread.StopThread();
 				//mClientThread = null;
 				
-				while (mClientThread.getThreadState()) {
+				while (mLoop2GetFrameThread.getThreadState()) {
 					try {
 						Thread.sleep(100);
 					} catch (InterruptedException e) {
@@ -155,7 +156,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 						e.printStackTrace();
 					}
 				}
-				mClientThread = null;
+				mLoop2GetFrameThread = null;
 				mDecoder.uinitDecoder();
 				mDecoder = null;
 				
@@ -167,7 +168,9 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
 		SharedPreferences settings = getSharedPreferences("SCREENCLIENT", 0);
 		String ip_prev = settings.getString("IP", null);
 		this.width = settings.getInt("WIDTH", 360);
-		this.height = settings.getInt("HEIGHT", 640);
+		this.height = settings.getInt("HEIGHT", 540);
+		this.studentId = settings.getString("ID", null);
+		this.roomId = settings.getString("RID", null);
 		
 		if (ip_prev != null) {
 			this.mIp = ip_prev;
@@ -197,14 +200,18 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
         SharedPreferences settings = getSharedPreferences("SCREENCLIENT", 0);
         final SharedPreferences.Editor editor = settings.edit();
         
-        String set_ip = settings.getString("IP", null);
+        String set_ip = settings.getString("IP", "");
         int aWidth = settings.getInt("WIDTH", 360);
         int aHeight = settings.getInt("HEIGHT", 640);
+        String set_id = settings.getString("ID", "");
+        String set_roomid = settings.getString("RID", "");
         
         if (mIp != null)
         	editTextIp.setText(set_ip);
         editTextHeight.setText(Integer.toString(aHeight));
         editTextWidth.setText(Integer.toString(aWidth));
+        editTextId.setText(set_id);
+        editTextRoomId.setText(set_roomid);
         
         builder.setPositiveButton("确定", new DialogInterface.OnClickListener()
         {
@@ -217,7 +224,7 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                 studentId = editTextId.getText().toString().trim();
                 roomId = editTextRoomId.getText().toString().trim();
                 
-                if (studentId.length() <= 0 || roomId.length() <= 0) {
+                if (studentId == null || roomId == null || studentId.length() <= 0 || roomId.length() <= 0) {
                 	Toast.makeText(MainActivity.this, "Please input valid IDs", Toast.LENGTH_SHORT).show();
                 	return;
                 }
@@ -229,6 +236,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback{
                 editor.putString("IP", mIp);
                 editor.putInt("WIDTH", width);
                 editor.putInt("HEIGHT", height);
+                editor.putString("ID", studentId);
+                editor.putString("RID", roomId);
                 editor.commit();
                 //    将输入的用户名和密码打印出来
                 Toast.makeText(MainActivity.this, "Server address: " + mIp + ", Resolution: " + aWidth + "x" + aHeight, Toast.LENGTH_SHORT).show();

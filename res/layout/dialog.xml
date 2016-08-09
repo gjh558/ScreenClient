@@ -82,7 +82,7 @@
         android:layout_alignParentRight="true"
         android:layout_below="@+id/editText_id"
         android:ems="10"
-        android:inputType="numberPassword" />
+        android:inputType="number" />
 
     <EditText
         android:id="@+id/editText_id"
@@ -92,6 +92,6 @@
         android:layout_alignParentRight="true"
         android:layout_below="@+id/editText_height"
         android:ems="10"
-        android:inputType="numberPassword" />
+        android:inputType="number" />
 
 </RelativeLayout>
